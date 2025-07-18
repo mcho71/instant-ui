@@ -164,16 +164,36 @@ class WindowManager {
     // ウィンドウ内でスクリプトを実行
     executeWindowScript(windowId, script) {
         try {
+            console.log('Executing script for window:', windowId);
+            console.log('Script content:', script.substring(0, 200) + '...');
+            
             // ウィンドウ固有のコンテキストでスクリプトを実行
             const windowElement = document.getElementById(windowId);
             const windowContent = windowElement.querySelector('.window-content');
             
+            if (!windowElement || !windowContent) {
+                console.error('Window elements not found for ID:', windowId);
+                return;
+            }
+            
             // スクリプトを関数でラップして実行
             const wrappedScript = `
                 (function() {
+                    console.log('Script executing for window ID: ${windowId}');
                     const windowElement = document.getElementById('${windowId}');
                     const windowContent = windowElement.querySelector('.window-content');
-                    ${script}
+                    
+                    if (!windowElement || !windowContent) {
+                        console.error('Window elements not found in script context');
+                        return;
+                    }
+                    
+                    try {
+                        ${script}
+                        console.log('Script executed successfully for window: ${windowId}');
+                    } catch (scriptError) {
+                        console.error('Error in window script execution:', scriptError);
+                    }
                 })();
             `;
             
@@ -182,6 +202,8 @@ class WindowManager {
             scriptElement.textContent = wrappedScript;
             document.body.appendChild(scriptElement);
             document.body.removeChild(scriptElement);
+            
+            console.log('Script element created and executed for window:', windowId);
             
         } catch (error) {
             console.error('Error executing window script:', error);
