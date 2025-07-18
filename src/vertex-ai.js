@@ -1,182 +1,157 @@
-const { PredictionServiceClient } = require('@google-cloud/aiplatform');
-const fs = require('fs');
-const path = require('path');
+const { GoogleGenAI } = require("@google/genai");
+const fs = require("fs");
+const path = require("path");
 
 class VertexAIClient {
-    constructor() {
-        this.projectId = process.env.VERTEX_AI_PROJECT_ID;
-        this.location = process.env.VERTEX_AI_LOCATION || 'us-central1';
-        this.accessToken = process.env.VERTEX_AI_ACCESS_TOKEN;
-        
-        if (!this.projectId || !this.accessToken) {
-            console.warn('Vertex AI credentials not configured properly');
-        }
-        
-        // Gemini 2.5 Flash-Liteはグローバルエンドポイントのみ
-        this.endpoint = `https://aiplatform.googleapis.com`;
+  constructor() {
+    this.apiKey = process.env.GOOGLE_AI_API_KEY;
+
+    if (!this.apiKey) {
+      console.warn("Google AI API key not configured");
     }
 
-    // プロンプトファイルを読み込み
-    loadPrompt(promptPath) {
-        try {
-            const fullPath = path.join(__dirname, '..', 'prompts', promptPath);
-            return fs.readFileSync(fullPath, 'utf-8');
-        } catch (error) {
-            console.error('Error loading prompt:', error);
-            return '';
-        }
-    }
+    // Initialize Google Generative AI
+    this.genAI = new GoogleGenAI({ 
+      vertexai: false, 
+      apiKey: this.apiKey 
+    });
 
-    // システムプロンプトとアプリプロンプトを結合
-    buildPrompt(appType, context = {}) {
-        const systemPrompt = this.loadPrompt('system.txt');
-        const appPrompt = this.loadPrompt(`apps/${appType}.txt`);
-        
-        let fullPrompt = systemPrompt + '\\n\\n' + appPrompt;
-        
-        // コンテキストを挿入
-        if (context.appName) {
-            fullPrompt = fullPrompt.replace('{APP_NAME}', context.appName);
-        }
-        
-        return fullPrompt;
-    }
-
-    // Gemini Flash Liteにリクエスト
-    async generateUI(appType, context = {}) {
-        if (!this.projectId || !this.accessToken) {
-            throw new Error('Vertex AI credentials not configured');
-        }
-
-        const prompt = this.buildPrompt(appType, context);
-        
-        const requestBody = {
-            contents: [{
-                role: "user",
-                parts: [{
-                    text: prompt
-                }]
-            }],
-            generation_config: {
-                temperature: 0.1,
-                max_output_tokens: 4096,
-                top_p: 0.8,
-                top_k: 40
-            }
-        };
-
-        try {
-            const url = `${this.endpoint}/v1/projects/${this.projectId}/locations/global/publishers/google/models/gemini-2.5-flash-lite-preview-06-17:generateContent`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.accessToken}`,
-                    'Content-Type': 'application/json'
+    // JSON response schema for UI generation
+    this.responseSchema = {
+      type: "object",
+      properties: {
+        html: {
+          type: "string",
+          description: "Complete HTML code using Tailwind CSS classes",
+        },
+        script: {
+          type: "string",
+          description: "Initialization JavaScript code",
+        },
+        styles: {
+          type: "string",
+          description: "Additional CSS if needed (usually empty)",
+        },
+        metadata: {
+          type: "object",
+          properties: {
+            title: {
+              type: "string",
+              description: "Application title",
+            },
+            defaultSize: {
+              type: "object",
+              properties: {
+                width: {
+                  type: "integer",
+                  description: "Default window width",
                 },
-                body: JSON.stringify(requestBody)
-            });
+                height: {
+                  type: "integer",
+                  description: "Default window height",
+                },
+              },
+              required: ["width", "height"],
+            },
+          },
+          required: ["title", "defaultSize"],
+        },
+      },
+      required: ["html", "script", "styles", "metadata"],
+    };
+  }
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Vertex AI API error: ${response.status} - ${errorText}`);
-            }
+  // プロンプトファイルを読み込み
+  loadPrompt(promptPath) {
+    try {
+      const fullPath = path.join(__dirname, "..", "prompts", promptPath);
+      return fs.readFileSync(fullPath, "utf-8");
+    } catch (error) {
+      console.error("Error loading prompt:", error);
+      return "";
+    }
+  }
 
-            const data = await response.json();
-            
-            if (!data.candidates || data.candidates.length === 0) {
-                throw new Error('No candidates in response');
-            }
+  // システムプロンプトとアプリプロンプトを結合
+  buildPrompt(appType, context = {}) {
+    const systemPrompt = this.loadPrompt("system.txt");
+    const appPrompt = this.loadPrompt(`apps/${appType}.txt`);
 
-            const content = data.candidates[0].content.parts[0].text;
-            return this.parseResponse(content);
-            
-        } catch (error) {
-            console.error('Vertex AI Error:', error);
-            throw error;
-        }
+    let fullPrompt = systemPrompt + "\\n\\n" + appPrompt;
+
+    // コンテキストを挿入
+    if (context.appName) {
+      fullPrompt = fullPrompt.replace("{APP_NAME}", context.appName);
     }
 
-    // レスポンスをパース（純粋なJSON文字列前提）
-    parseResponse(content) {
-        try {
-            // レスポンスは直接JSON文字列として返される前提
-            const trimmedContent = content.trim();
-            
-            // 部分的なJSONの場合（トークン制限で切れた場合）の修復を試行
-            if (!this.isValidJSON(trimmedContent)) {
-                const repairedJson = this.repairPartialJson(trimmedContent);
-                return JSON.parse(repairedJson);
-            }
-            
-            return JSON.parse(trimmedContent);
-            
-        } catch (error) {
-            console.error('Error parsing AI response:', error);
-            console.error('Raw content:', content);
-            throw new Error('Failed to parse AI response: ' + error.message);
-        }
+    return fullPrompt;
+  }
+
+  // Gemini Flash Liteにリクエスト（Google AI SDK使用）
+  async generateUI(appType, context = {}) {
+    if (!this.apiKey) {
+      throw new Error("Google AI API key not configured");
     }
 
-    // JSONの妥当性チェック
-    isValidJSON(str) {
-        try {
-            JSON.parse(str);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    }
+    const prompt = this.buildPrompt(appType, context);
 
-    // 部分的なJSONを修復
-    repairPartialJson(partialJson) {
-        try {
-            let repaired = partialJson;
-            
-            // 最後の不完全な行を削除
-            const lines = repaired.split('\\n');
-            let lastLine = lines[lines.length - 1];
-            
-            // 最後の行が不完全な場合は削除または修復
-            while (lines.length > 0 && lastLine && 
-                   !lastLine.trim().endsWith('"') && 
-                   !lastLine.trim().endsWith(',') && 
-                   !lastLine.trim().endsWith('}') &&
-                   !lastLine.trim().endsWith(']')) {
-                lines.pop();
-                lastLine = lines.length > 0 ? lines[lines.length - 1] : '';
-            }
-            
-            repaired = lines.join('\\n');
-            
-            // 不完全な文字列プロパティを修正
-            repaired = repaired.replace(/,\\s*$/, ''); // 末尾のカンマ削除
-            
-            // 最後の閉じ括弧を確認・追加
-            const openBraces = (repaired.match(/\\{/g) || []).length;
-            const closeBraces = (repaired.match(/\\}/g) || []).length;
-            
-            if (openBraces > closeBraces) {
-                repaired += '\\n}';
-            }
-            
-            return repaired;
-        } catch (error) {
-            console.error('Could not repair partial JSON:', error);
-            throw error;
-        }
-    }
+    try {
+      console.log("Sending request to Google AI...");
+      console.log("Model:", "gemini-2.5-flash-lite-preview-06-17");
 
-    // ヘルスチェック
-    async healthCheck() {
-        try {
-            await this.generateUI('calculator', { test: true });
-            return true;
-        } catch (error) {
-            console.error('Health check failed:', error);
-            return false;
-        }
+      const result = await this.genAI.models.generateContent({
+        model: "gemini-2.5-flash-lite-preview-06-17",
+        contents: prompt,
+        config: {
+          temperature: 0.1,
+          maxOutputTokens: 4096,
+          topP: 0.8,
+          topK: 40,
+          responseMimeType: "application/json",
+          responseSchema: this.responseSchema,
+        },
+      });
+
+      console.log("Response received from Google AI");
+      console.log("Response type:", typeof result);
+      console.log("Response keys:", Object.keys(result));
+
+      if (!result.text) {
+        throw new Error("No text in response");
+      }
+
+      const content = result.text;
+
+      console.log("Raw response content:", content);
+      console.log("Content type:", typeof content);
+      console.log("Content length:", content.length);
+
+      // With structured output, the response should already be valid JSON
+      try {
+        const parsed = JSON.parse(content);
+        console.log("Successfully parsed JSON:", parsed);
+        return parsed;
+      } catch (parseError) {
+        console.error("JSON Parse Error:", parseError);
+        console.error("Raw content that failed to parse:", content);
+        throw new Error(`Failed to parse JSON response: ${parseError.message}`);
+      }
+    } catch (error) {
+      console.error("Google AI Error:", error);
+      throw error;
     }
+  }
+
+  // ヘルスチェック
+  async healthCheck() {
+    try {
+      await this.generateUI("calculator", { test: true });
+      return true;
+    } catch (error) {
+      console.error("Health check failed:", error);
+      return false;
+    }
+  }
 }
 
 module.exports = VertexAIClient;
