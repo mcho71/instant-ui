@@ -5,17 +5,18 @@
 ## プロジェクト概要
 
 **Instant UI** - AI駆動アプリランチャー
-- Google Vertex AI (Gemini Flash Lite) を使用
+- Google Vertex AI (Gemini 2.5/2.0 Flash-Lite) を使用
 - ユーザーのアクションに応じて動的にUIを生成
 - デスクトップライクなWebアプリケーション
+- デュアルエンドポイント対応（グローバル・リージョナル）
+- 高速キャッシュシステム搭載
 
 ## 開発環境
 
 ### 必要な環境変数
 ```env
-VERTEX_AI_PROJECT_ID=your-google-cloud-project-id
-VERTEX_AI_LOCATION=asia-northeast1
-VERTEX_AI_ACCESS_TOKEN=your-vertex-ai-access-token
+GOOGLE_AI_API_KEY=your-google-ai-api-key
+GOOGLE_CLOUD_PROJECT=your-google-cloud-project-id
 PORT=3000
 ```
 
@@ -31,22 +32,32 @@ npm install    # 依存関係インストール
 ### ディレクトリ構造
 ```
 instant-ui/
-├── public/           # フロントエンド
-│   ├── index.html   # メインページ
-│   └── js/          # JavaScript
-├── src/             # バックエンド
-│   └── vertex-ai.js # AI接続
-├── prompts/         # AIプロンプト
-│   ├── system.txt   # システムプロンプト
-│   └── apps/        # アプリ別プロンプト
-└── server.js        # Express サーバー
+├── public/                    # フロントエンド
+│   ├── index.html            # メインページ
+│   └── js/                   # JavaScript
+│       ├── app.js           # メインアプリケーション
+│       ├── window-manager.js # ウィンドウシステム
+│       ├── ui-cache.js      # UIキャッシュ管理
+│       ├── cache-manager.js # キャッシュUI管理
+│       ├── model-switcher.js # モデル切り替え
+│       ├── ai-client.js     # AI API通信
+│       └── storage.js       # ストレージ管理
+├── src/                      # バックエンド
+│   └── vertex-ai.js         # AI接続とモデル管理
+├── prompts/                  # AIプロンプト
+│   ├── system.txt           # システムプロンプト
+│   └── apps/                # アプリ別プロンプト
+├── server.js                 # Express サーバー
+└── package.json             # 依存関係
 ```
 
 ### 技術スタック
 - **フロントエンド**: Vanilla JavaScript, Tailwind CSS (CDN)
 - **バックエンド**: Node.js, Express
-- **AI**: Google Vertex AI (Gemini 2.5 Flash-Lite)
-- **認証**: アクセストークン (.env管理)
+- **AI**: Google Vertex AI (Gemini 2.5/2.0 Flash-Lite)
+- **SDK**: @google/genai
+- **認証**: API キー + プロジェクトID (.env管理)
+- **ストレージ**: localStorage (キャッシュ)
 
 ## AIプロンプト管理
 
@@ -94,13 +105,11 @@ instant-ui/
 
 ## 対応アプリ一覧
 
-### 実装済み
-- 🧮 **電卓** - プロンプト作成済み
-
-### 実装予定
+### 実装済み (全6アプリ)
+- 🧮 **電卓** - 基本的な四則演算
 - 📝 **メモ帳** - テキスト編集と保存
 - 🕐 **時計** - リアルタイム時刻表示
-- 🌤️ **天気** - 天気情報表示
+- 🌤️ **天気** - 天気情報表示（外部API不使用）
 - ✅ **TODO** - タスク管理
 - 🎨 **描画** - ペイントツール
 
@@ -108,6 +117,9 @@ instant-ui/
 
 ### エンドポイント
 - `POST /api/generate-ui` - UI生成リクエスト
+- `GET /api/models` - モデル情報取得
+- `POST /api/models/switch` - モデル切り替え
+- `GET /api/performance` - パフォーマンス統計
 
 ### リクエスト形式
 ```json
@@ -115,7 +127,8 @@ instant-ui/
   "appType": "calculator",
   "context": {
     "appName": "電卓"
-  }
+  },
+  "model": "gemini-2.5-flash-lite" // オプション
 }
 ```
 
@@ -130,6 +143,11 @@ instant-ui/
     "metadata": {
       "title": "アプリ名",
       "defaultSize": { "width": 400, "height": 500 }
+    },
+    "_performance": {
+      "model": "gemini-2.5-flash-lite",
+      "responseTime": 1250,
+      "timestamp": "2025-01-18T10:30:00Z"
     }
   }
 }
@@ -138,15 +156,20 @@ instant-ui/
 ## トラブルシューティング
 
 ### よくある問題
-1. **Vertex AI認証エラー**
+1. **Google AI API認証エラー**
    - .envファイルの設定確認
-   - アクセストークンの有効性確認
+   - APIキーの有効性確認
+   - プロジェクトIDの設定確認
 
-2. **プロンプト生成失敗**
-   - フォールバックUIで対応
-   - エラーログの確認
+2. **モデル切り替え失敗**
+   - 2.0 Flash-LiteにはプロジェクトIDが必要
+   - エンドポイントの設定確認
 
-3. **ウィンドウ表示問題**
+3. **キャッシュ問題**
+   - ブラウザのlocalStorageを確認
+   - 期限切れキャッシュの自動削除
+
+4. **ウィンドウ表示問題**
    - ブラウザの開発者ツールで確認
    - JavaScript エラーの確認
 
@@ -154,27 +177,48 @@ instant-ui/
 - サーバーログの確認
 - ブラウザのコンソールログ
 - ネットワークタブでAPI通信確認
+- キャッシュ管理パネルでキャッシュ状態確認
 
 ## 今後の発展
 
+### 完了した主要機能
+- ✅ 全6アプリの完全実装
+- ✅ デュアルモデル対応
+- ✅ UIキャッシュシステム
+- ✅ パフォーマンス監視
+- ✅ ウィンドウリサイズ機能
+- ✅ ESCキーショートカット
+
 ### 短期目標
-- 電卓アプリの完璧な動作
-- プロンプトの最適化
-- 他アプリのプロンプト作成
+- モデル性能の継続的な比較分析
+- プロンプトの細かな調整
+- キャッシュ管理の最適化
 
 ### 長期目標
 - 自然言語でのアプリリクエスト
-- UIの保存・再利用機能
+- カスタムアプリの動的生成
 - アプリ間連携
-- カスタマイズ機能
+- テーマ・カスタマイズ機能
 
 ## 開発ガイドライン
 
-### プロンプト開発
-1. 簡潔で明確な指示
-2. 具体的な例の提供
-3. エラーケースの考慮
-4. 段階的な改善
+### キャッシュ管理
+1. 7日間のTTL設定
+2. 最大50件のパフォーマンス記録
+3. 10分間隔での自動クリーンアップ
+4. ユーザーによる手動管理
+
+### モデル切り替え
+1. 2.5はグローバルエンドポイント
+2. 2.0はリージョナルエンドポイント
+3. リアルタイムパフォーマンス追跡
+4. 統計情報の30秒間隔更新
+
+### ウィンドウ管理
+1. 最小サイズ: 200x150px
+2. 画面境界の制限
+3. ESCキーでの閉じる機能
+4. 8方向リサイズ対応
 
 ### コード品質
 1. シンプルで読みやすいコード
@@ -184,5 +228,5 @@ instant-ui/
 
 ---
 
-**最終更新**: 初期実装完了時
-**次回タスク**: プロンプト調整とAI生成テスト
+**最終更新**: フェーズ2完了時（2025年1月18日）
+**開発状況**: 全機能実装完了、本番レディ
