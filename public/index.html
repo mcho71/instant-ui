@@ -6,33 +6,149 @@
     <title>Instant UI - AI駆動アプリランチャー</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* グラデーション背景 */
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        /* アプリアイコン */
         .app-icon {
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
         }
         .app-icon:hover {
-            transform: translateY(-4px);
+            transform: translateY(-8px) scale(1.05);
         }
+        .app-icon:active {
+            transform: translateY(-4px) scale(0.98);
+        }
+        
+        /* アプリカードのグラデーション */
+        .app-card {
+            background: linear-gradient(135deg, var(--color-start), var(--color-end));
+            position: relative;
+            overflow: hidden;
+        }
+        .app-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transition: transform 0.3s ease;
+            transform: translate(-100%, -100%);
+        }
+        .app-card:hover::before {
+            transform: translate(-50%, -50%);
+        }
+        
+        /* ウィンドウ */
         .window {
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .window-dragging {
-            opacity: 0.9;
+            opacity: 0.8;
+            transform: rotate(2deg);
         }
+        
+        /* アニメーション */
         @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from { 
+                opacity: 0; 
+                transform: scale(0.8) translateY(20px);
+            }
+            to { 
+                opacity: 1; 
+                transform: scale(1) translateY(0);
+            }
         }
         .fade-in {
-            animation: fadeIn 0.3s ease-out;
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+        .slide-up {
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* ローディングアニメーション */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* ガラス効果 */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* ツールチップ */
+        .tooltip {
+            position: relative;
+        }
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-5px);
         }
     </style>
 </head>
-<body class="bg-gray-100 h-screen overflow-hidden">
+<body class="gradient-bg h-screen overflow-hidden">
     <!-- ヘッダー -->
-    <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header class="glass px-6 py-4 slide-up">
         <div class="flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-800">Instant UI</h1>
-            <p class="text-sm text-gray-600">AI駆動アプリランチャー</p>
+            <h1 class="text-2xl font-bold text-white drop-shadow-lg">✨ Instant UI</h1>
+            <p class="text-sm text-white/80">AI駆動アプリランチャー</p>
         </div>
     </header>
 
@@ -53,15 +169,19 @@
 
     <!-- ローディング表示 -->
     <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 flex flex-col items-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p class="mt-4 text-gray-700">AIがUIを生成中...</p>
+        <div class="glass rounded-2xl p-8 flex flex-col items-center fade-in">
+            <div class="loading-spinner"></div>
+            <p class="mt-4 text-white font-medium">✨ AIがUIを生成中...</p>
+            <p class="text-white/70 text-sm mt-2">少々お待ちください</p>
         </div>
     </div>
 
     <!-- エラー表示 -->
-    <div id="error" class="hidden fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-        <p id="error-message"></p>
+    <div id="error" class="hidden fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl z-50 fade-in">
+        <div class="flex items-center">
+            <span class="mr-2">⚠️</span>
+            <p id="error-message"></p>
+        </div>
     </div>
 
     <!-- JavaScript -->

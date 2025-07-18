@@ -43,16 +43,21 @@ class WindowManager {
     buildWindowElement(windowId, options) {
         const div = document.createElement('div');
         div.id = windowId;
-        div.className = 'window absolute bg-white rounded-lg shadow-2xl fade-in pointer-events-auto';
+        div.className = 'window absolute glass rounded-2xl shadow-2xl fade-in pointer-events-auto';
         div.style.width = (options.metadata?.defaultSize?.width || 400) + 'px';
         div.style.height = (options.metadata?.defaultSize?.height || 500) + 'px';
         
         div.innerHTML = `
-            <div class="window-header bg-gray-100 rounded-t-lg px-4 py-2 flex justify-between items-center cursor-move">
-                <h3 class="text-sm font-semibold text-gray-700">${options.title}</h3>
-                <button class="window-close text-gray-500 hover:text-gray-700 text-xl leading-none">&times;</button>
+            <div class="window-header bg-white/10 rounded-t-2xl px-4 py-3 flex justify-between items-center cursor-move border-b border-white/20">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-red-400 rounded-full mr-2"></div>
+                    <div class="w-3 h-3 bg-yellow-400 rounded-full mr-2"></div>
+                    <div class="w-3 h-3 bg-green-400 rounded-full mr-3"></div>
+                    <h3 class="text-sm font-semibold text-white">${options.title}</h3>
+                </div>
+                <button class="window-close text-white/70 hover:text-white text-xl leading-none transition-colors">&times;</button>
             </div>
-            <div class="window-content overflow-auto" style="height: calc(100% - 40px);">
+            <div class="window-content overflow-auto bg-white/95 rounded-b-2xl" style="height: calc(100% - 48px);">
                 ${options.styles ? `<style>${options.styles}</style>` : ''}
                 ${options.content}
             </div>
@@ -67,8 +72,10 @@ class WindowManager {
         const x = (window.innerWidth - rect.width) / 2;
         const y = (window.innerHeight - rect.height) / 2 - 50;
         
-        windowElement.style.left = Math.max(0, x) + 'px';
-        windowElement.style.top = Math.max(0, y) + 'px';
+        // ランダムなオフセットを追加（複数ウィンドウの重複を避ける）
+        const randomOffset = this.windows.size * 30;
+        windowElement.style.left = Math.max(0, x + randomOffset) + 'px';
+        windowElement.style.top = Math.max(0, y + randomOffset) + 'px';
     }
 
     // ウィンドウイベントの設定
@@ -146,8 +153,9 @@ class WindowManager {
         if (!windowData) return;
         
         // フェードアウトアニメーション
+        windowData.element.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         windowData.element.style.opacity = '0';
-        windowData.element.style.transform = 'scale(0.95)';
+        windowData.element.style.transform = 'scale(0.8) translateY(-20px)';
         
         setTimeout(() => {
             windowData.element.remove();
