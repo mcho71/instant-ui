@@ -40,4 +40,11 @@
 - Date オブジェクトを活用
 - アナログ時計は Canvas または SVG で描画
 - アラーム音は短めの音を使用
-- localStorage でアラーム設定を保存
+
+## データ永続化について：
+- アラーム設定や設定をlocalStorageに保存する場合は、必ず window.storageManager を使用してください
+- データタイプは window.DATA_TYPES の定数を使用してください
+- 使用例：
+  - アラーム保存: window.storageManager.save('clock', DATA_TYPES.DATA, alarmData)
+  - 設定保存: window.storageManager.save('clock', DATA_TYPES.SETTINGS, settingsData)
+  - データ読み込み: window.storageManager.load('clock', DATA_TYPES.DATA, null, [])

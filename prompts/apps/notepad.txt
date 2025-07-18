@@ -34,8 +34,15 @@
 - 高い視認性のフォント
 
 ## 実装の注意点：
-- localStorage を使用してデータを永続化
 - 文字数制限を設けて入力を制御
 - 検索機能はハイライト表示
 - 保存時は自動で日時を記録
 - エラーハンドリングを適切に実装
+
+## データ永続化について：
+- ファイル保存や設定をlocalStorageに保存する場合は、必ず window.storageManager を使用してください
+- データタイプは window.DATA_TYPES の定数を使用してください
+- 使用例：
+  - ファイル保存: window.storageManager.save('notepad', DATA_TYPES.DATA, fileContent, fileName)
+  - 設定保存: window.storageManager.save('notepad', DATA_TYPES.SETTINGS, settingsData)
+  - データ読み込み: window.storageManager.load('notepad', DATA_TYPES.DATA, fileName, '')

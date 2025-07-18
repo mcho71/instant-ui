@@ -28,3 +28,11 @@
 - 全てのイベントリスナーを適切に設定
 - 数値の桁数制限（10桁まで）
 - エラー処理を含む堅牢な実装
+
+## データ永続化について：
+- 計算履歴や設定をlocalStorageに保存する場合は、必ず window.storageManager を使用してください
+- データタイプは window.DATA_TYPES の定数を使用してください
+- 使用例：
+  - 設定保存: window.storageManager.save('calculator', DATA_TYPES.SETTINGS, settingsData)
+  - 履歴保存: window.storageManager.save('calculator', DATA_TYPES.HISTORY, historyData)
+  - データ読み込み: window.storageManager.load('calculator', DATA_TYPES.SETTINGS, null, defaultSettings)

@@ -36,9 +36,16 @@
 - 主要都市のデータを内蔵（静的データ）
 - 現在地機能は使用しない
 - 温度単位変換機能を実装
-- ローカルストレージで設定保存
 - レスポンシブデザイン対応
 - 全てのデータはJavaScript内で定義
+
+## データ永続化について：
+- 設定や選択した都市をlocalStorageに保存する場合は、必ず window.storageManager を使用してください
+- データタイプは window.DATA_TYPES の定数を使用してください
+- 使用例：
+  - 設定保存: window.storageManager.save('weather', DATA_TYPES.SETTINGS, settingsData)
+  - 選択都市保存: window.storageManager.save('weather', DATA_TYPES.PREFERENCES, {selectedCity: 'tokyo'})
+  - データ読み込み: window.storageManager.load('weather', DATA_TYPES.SETTINGS, null, defaultSettings)
 
 ## モックデータ例：
 - 東京、大阪、名古屋、福岡、札幌など

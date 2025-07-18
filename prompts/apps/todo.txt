@@ -36,10 +36,17 @@
 - チェックボックスで完了状態を表現
 
 ## 実装の注意点：
-- localStorage を使用してデータを永続化
 - 日付操作は Date オブジェクトを使用
 - ドラッグ&ドロップはHTML5 APIを使用
 - 入力バリデーションを実装
 - 削除時は確認ダイアログを表示
 - レスポンシブデザイン対応
 - キーボードショートカット対応（Enter で追加など）
+
+## データ永続化について：
+- TODOタスクや設定をlocalStorageに保存する場合は、必ず window.storageManager を使用してください
+- データタイプは window.DATA_TYPES の定数を使用してください
+- 使用例：
+  - タスク保存: window.storageManager.save('todo', DATA_TYPES.DATA, todoList)
+  - 設定保存: window.storageManager.save('todo', DATA_TYPES.SETTINGS, settingsData)
+  - データ読み込み: window.storageManager.load('todo', DATA_TYPES.DATA, null, [])

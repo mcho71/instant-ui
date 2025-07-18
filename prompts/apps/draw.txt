@@ -43,6 +43,14 @@
 - レスポンシブデザイン対応
 - 描画中のパフォーマンス最適化
 
+## データ永続化について：
+- 描画設定や作品をlocalStorageに保存する場合は、必ず window.storageManager を使用してください
+- データタイプは window.DATA_TYPES の定数を使用してください
+- 使用例：
+  - 設定保存: window.storageManager.save('draw', DATA_TYPES.SETTINGS, settingsData)
+  - 作品保存: window.storageManager.save('draw', DATA_TYPES.DATA, canvasData, artworkName)
+  - データ読み込み: window.storageManager.load('draw', DATA_TYPES.SETTINGS, null, defaultSettings)
+
 ## キャンバス設定：
 - 初期サイズ: 800x600px
 - 背景色: 白
