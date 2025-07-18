@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant UI - AI駆動アプリランチャー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .app-icon {
+            transition: all 0.2s ease;
+        }
+        .app-icon:hover {
+            transform: translateY(-4px);
+        }
+        .window {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .window-dragging {
+            opacity: 0.9;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen overflow-hidden">
+    <!-- ヘッダー -->
+    <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800">Instant UI</h1>
+            <p class="text-sm text-gray-600">AI駆動アプリランチャー</p>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="relative h-full">
+        <!-- アプリランチャー -->
+        <div id="launcher" class="p-8">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                <!-- アプリアイコンはJavaScriptで動的に生成 -->
+            </div>
+        </div>
+
+        <!-- ウィンドウコンテナ -->
+        <div id="window-container" class="absolute inset-0 pointer-events-none">
+            <!-- ウィンドウはここに動的に追加される -->
+        </div>
+    </main>
+
+    <!-- ローディング表示 -->
+    <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="mt-4 text-gray-700">AIがUIを生成中...</p>
+        </div>
+    </div>
+
+    <!-- エラー表示 -->
+    <div id="error" class="hidden fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+        <p id="error-message"></p>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/js/app.js"></script>
+    <script src="/js/window-manager.js"></script>
+    <script src="/js/ai-client.js"></script>
+</body>
+</html>
