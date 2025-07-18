@@ -15,7 +15,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@google-cloud/aiplatform": "^3.28.0",
+    "@google-cloud/vertexai": "^1.10.0",
+    "@google/genai": "^1.10.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.2"
   },
