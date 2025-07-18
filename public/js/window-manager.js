@@ -35,6 +35,9 @@ class WindowManager {
         // イベントリスナーの設定
         this.setupWindowEvents(windowId, windowElement);
         
+        // リサイズハンドルの設定
+        this.setupResizeHandles(windowId, windowElement);
+        
         // アクティブにする
         this.activateWindow(windowId);
         
@@ -68,6 +71,15 @@ class WindowManager {
                 ${options.styles ? `<style>${options.styles}</style>` : ''}
                 ${options.content}
             </div>
+            <!-- リサイズハンドル -->
+            <div class="resize-handle resize-n"></div>
+            <div class="resize-handle resize-s"></div>
+            <div class="resize-handle resize-e"></div>
+            <div class="resize-handle resize-w"></div>
+            <div class="resize-handle resize-ne"></div>
+            <div class="resize-handle resize-nw"></div>
+            <div class="resize-handle resize-se"></div>
+            <div class="resize-handle resize-sw"></div>
         `;
         
         return div;
@@ -223,6 +235,98 @@ class WindowManager {
         } catch (error) {
             console.error('Error executing window script:', error);
         }
+    }
+
+    // リサイズハンドルの設定
+    setupResizeHandles(windowId, windowElement) {
+        const handles = windowElement.querySelectorAll('.resize-handle');
+        
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const direction = handle.classList[1]; // resize-n, resize-s, etc.
+                this.startResize(windowId, windowElement, direction, e);
+            });
+        });
+    }
+
+    // リサイズ開始
+    startResize(windowId, windowElement, direction, startEvent) {
+        const startX = startEvent.clientX;
+        const startY = startEvent.clientY;
+        const startWidth = parseInt(windowElement.style.width);
+        const startHeight = parseInt(windowElement.style.height);
+        const startLeft = windowElement.offsetLeft;
+        const startTop = windowElement.offsetTop;
+        
+        // 最小サイズ
+        const minWidth = 200;
+        const minHeight = 150;
+        
+        windowElement.classList.add('window-resizing');
+        
+        const handleMouseMove = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            let newLeft = startLeft;
+            let newTop = startTop;
+            
+            // 方向に応じてサイズと位置を調整
+            if (direction.includes('e')) {
+                newWidth = Math.max(minWidth, startWidth + deltaX);
+            }
+            if (direction.includes('w')) {
+                newWidth = Math.max(minWidth, startWidth - deltaX);
+                newLeft = startLeft + (startWidth - newWidth);
+            }
+            if (direction.includes('s')) {
+                newHeight = Math.max(minHeight, startHeight + deltaY);
+            }
+            if (direction.includes('n')) {
+                newHeight = Math.max(minHeight, startHeight - deltaY);
+                newTop = startTop + (startHeight - newHeight);
+            }
+            
+            // 画面境界チェック
+            if (newLeft < 0) {
+                newWidth += newLeft;
+                newLeft = 0;
+            }
+            if (newTop < 0) {
+                newHeight += newTop;
+                newTop = 0;
+            }
+            if (newLeft + newWidth > window.innerWidth) {
+                newWidth = window.innerWidth - newLeft;
+            }
+            if (newTop + newHeight > window.innerHeight) {
+                newHeight = window.innerHeight - newTop;
+            }
+            
+            // 最小サイズを再チェック
+            newWidth = Math.max(minWidth, newWidth);
+            newHeight = Math.max(minHeight, newHeight);
+            
+            // スタイルを適用
+            windowElement.style.width = newWidth + 'px';
+            windowElement.style.height = newHeight + 'px';
+            windowElement.style.left = newLeft + 'px';
+            windowElement.style.top = newTop + 'px';
+        };
+        
+        const handleMouseUp = () => {
+            windowElement.classList.remove('window-resizing');
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
     }
 }
 
