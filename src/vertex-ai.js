@@ -97,30 +97,19 @@ class VertexAIClient {
         }
     }
 
-    // レスポンスをパース
+    // レスポンスをパース（純粋なJSON文字列前提）
     parseResponse(content) {
         try {
-            // JSONブロックを抽出
-            const jsonMatch = content.match(/```json\\s*([\\s\\S]*?)\\s*```/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[1]);
+            // レスポンスは直接JSON文字列として返される前提
+            const trimmedContent = content.trim();
+            
+            // 部分的なJSONの場合（トークン制限で切れた場合）の修復を試行
+            if (!this.isValidJSON(trimmedContent)) {
+                const repairedJson = this.repairPartialJson(trimmedContent);
+                return JSON.parse(repairedJson);
             }
             
-            // 直接JSONの場合
-            if (content.trim().startsWith('{')) {
-                return JSON.parse(content);
-            }
-            
-            // 部分的なJSONの場合（トークン制限で切れた場合）
-            const partialJsonMatch = content.match(/```json\\s*([\\s\\S]*)/);
-            if (partialJsonMatch) {
-                const partialJson = partialJsonMatch[1];
-                // 不完全なJSONを修復を試みる
-                return this.repairPartialJson(partialJson);
-            }
-            
-            // パースできない場合はエラー
-            throw new Error('Could not parse AI response as JSON');
+            return JSON.parse(trimmedContent);
             
         } catch (error) {
             console.error('Error parsing AI response:', error);
@@ -129,26 +118,39 @@ class VertexAIClient {
         }
     }
 
+    // JSONの妥当性チェック
+    isValidJSON(str) {
+        try {
+            JSON.parse(str);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     // 部分的なJSONを修復
     repairPartialJson(partialJson) {
         try {
-            // 基本的な修復：最後の不完全な文字列を削除
             let repaired = partialJson;
             
             // 最後の不完全な行を削除
             const lines = repaired.split('\\n');
-            const lastLine = lines[lines.length - 1];
+            let lastLine = lines[lines.length - 1];
             
-            // 最後の行が不完全な場合は削除
-            if (lastLine && !lastLine.trim().endsWith('"') && !lastLine.trim().endsWith(',') && !lastLine.trim().endsWith('}')) {
+            // 最後の行が不完全な場合は削除または修復
+            while (lines.length > 0 && lastLine && 
+                   !lastLine.trim().endsWith('"') && 
+                   !lastLine.trim().endsWith(',') && 
+                   !lastLine.trim().endsWith('}') &&
+                   !lastLine.trim().endsWith(']')) {
                 lines.pop();
-                repaired = lines.join('\\n');
+                lastLine = lines.length > 0 ? lines[lines.length - 1] : '';
             }
             
-            // 不完全なscriptプロパティを修正
-            if (repaired.includes('"script":') && !repaired.includes('"script": "')) {
-                repaired = repaired.replace(/"script": "([^"]*(?:[^"\\\\]|\\\\.)*)$/, '"script": "$1"');
-            }
+            repaired = lines.join('\\n');
+            
+            // 不完全な文字列プロパティを修正
+            repaired = repaired.replace(/,\\s*$/, ''); // 末尾のカンマ削除
             
             // 最後の閉じ括弧を確認・追加
             const openBraces = (repaired.match(/\\{/g) || []).length;
@@ -158,7 +160,7 @@ class VertexAIClient {
                 repaired += '\\n}';
             }
             
-            return JSON.parse(repaired);
+            return repaired;
         } catch (error) {
             console.error('Could not repair partial JSON:', error);
             throw error;
