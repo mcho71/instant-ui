@@ -47,8 +47,6 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log('Environment:', {
-    projectId: process.env.VERTEX_AI_PROJECT_ID ? 'Set' : 'Not set',
-    location: process.env.VERTEX_AI_LOCATION || 'Not set',
-    token: process.env.VERTEX_AI_ACCESS_TOKEN ? 'Set' : 'Not set'
+    googleAIApiKey: process.env.GOOGLE_AI_API_KEY ? 'Set' : 'Not set'
   });
 });
