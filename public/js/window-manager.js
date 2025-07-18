@@ -5,6 +5,13 @@ class WindowManager {
         this.activeWindow = null;
         this.zIndexCounter = 1000;
         this.container = document.getElementById('window-container');
+        
+        // ESCキーでアクティブウィンドウを閉じる
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.activeWindow) {
+                this.closeWindow(this.activeWindow);
+            }
+        });
     }
 
     // ウィンドウの作成
