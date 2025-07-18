@@ -100,8 +100,7 @@ function renderAppLauncher() {
 // アプリアイコンの作成
 function createAppIcon(app) {
     const div = document.createElement('div');
-    div.className = 'app-icon text-center tooltip';
-    div.setAttribute('data-tooltip', app.description);
+    div.className = 'app-icon text-center';
     
     // キャッシュ状態をチェック
     const hasCachedUI = window.uiCacheManager ? window.uiCacheManager.hasCache(app.id) : false;
