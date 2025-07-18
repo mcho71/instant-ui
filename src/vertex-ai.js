@@ -5,15 +5,15 @@ const path = require('path');
 class VertexAIClient {
     constructor() {
         this.projectId = process.env.VERTEX_AI_PROJECT_ID;
-        this.location = process.env.VERTEX_AI_LOCATION || 'asia-northeast1';
+        this.location = process.env.VERTEX_AI_LOCATION || 'us-central1';
         this.accessToken = process.env.VERTEX_AI_ACCESS_TOKEN;
         
         if (!this.projectId || !this.accessToken) {
             console.warn('Vertex AI credentials not configured properly');
         }
         
-        // REST APIを使用（アクセストークン認証）
-        this.endpoint = `https://${this.location}-aiplatform.googleapis.com`;
+        // Gemini 2.5 Flash-Liteはグローバルエンドポイントのみ
+        this.endpoint = `https://aiplatform.googleapis.com`;
     }
 
     // プロンプトファイルを読み込み
@@ -52,20 +52,21 @@ class VertexAIClient {
         
         const requestBody = {
             contents: [{
+                role: "user",
                 parts: [{
                     text: prompt
                 }]
             }],
             generation_config: {
                 temperature: 0.1,
-                max_output_tokens: 2048,
+                max_output_tokens: 4096,
                 top_p: 0.8,
                 top_k: 40
             }
         };
 
         try {
-            const url = `${this.endpoint}/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/gemini-2.5-flash-lite:generateContent`;
+            const url = `${this.endpoint}/v1/projects/${this.projectId}/locations/global/publishers/google/models/gemini-2.5-flash-lite-preview-06-17:generateContent`;
             
             const response = await fetch(url, {
                 method: 'POST',
@@ -110,6 +111,14 @@ class VertexAIClient {
                 return JSON.parse(content);
             }
             
+            // 部分的なJSONの場合（トークン制限で切れた場合）
+            const partialJsonMatch = content.match(/```json\\s*([\\s\\S]*)/);
+            if (partialJsonMatch) {
+                const partialJson = partialJsonMatch[1];
+                // 不完全なJSONを修復を試みる
+                return this.repairPartialJson(partialJson);
+            }
+            
             // パースできない場合はエラー
             throw new Error('Could not parse AI response as JSON');
             
@@ -117,6 +126,42 @@ class VertexAIClient {
             console.error('Error parsing AI response:', error);
             console.error('Raw content:', content);
             throw new Error('Failed to parse AI response: ' + error.message);
+        }
+    }
+
+    // 部分的なJSONを修復
+    repairPartialJson(partialJson) {
+        try {
+            // 基本的な修復：最後の不完全な文字列を削除
+            let repaired = partialJson;
+            
+            // 最後の不完全な行を削除
+            const lines = repaired.split('\\n');
+            const lastLine = lines[lines.length - 1];
+            
+            // 最後の行が不完全な場合は削除
+            if (lastLine && !lastLine.trim().endsWith('"') && !lastLine.trim().endsWith(',') && !lastLine.trim().endsWith('}')) {
+                lines.pop();
+                repaired = lines.join('\\n');
+            }
+            
+            // 不完全なscriptプロパティを修正
+            if (repaired.includes('"script":') && !repaired.includes('"script": "')) {
+                repaired = repaired.replace(/"script": "([^"]*(?:[^"\\\\]|\\\\.)*)$/, '"script": "$1"');
+            }
+            
+            // 最後の閉じ括弧を確認・追加
+            const openBraces = (repaired.match(/\\{/g) || []).length;
+            const closeBraces = (repaired.match(/\\}/g) || []).length;
+            
+            if (openBraces > closeBraces) {
+                repaired += '\\n}';
+            }
+            
+            return JSON.parse(repaired);
+        } catch (error) {
+            console.error('Could not repair partial JSON:', error);
+            throw error;
         }
     }
 
