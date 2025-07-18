@@ -45,7 +45,7 @@ instant-ui/
 ### 技術スタック
 - **フロントエンド**: Vanilla JavaScript, Tailwind CSS (CDN)
 - **バックエンド**: Node.js, Express
-- **AI**: Google Vertex AI (Gemini Flash Lite)
+- **AI**: Google Vertex AI (Gemini 2.5 Flash-Lite)
 - **認証**: アクセストークン (.env管理)
 
 ## AIプロンプト管理

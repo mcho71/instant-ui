@@ -51,22 +51,21 @@ class VertexAIClient {
         const prompt = this.buildPrompt(appType, context);
         
         const requestBody = {
-            instances: [{
-                messages: [{
-                    role: 'user',
-                    content: prompt
+            contents: [{
+                parts: [{
+                    text: prompt
                 }]
             }],
-            parameters: {
+            generation_config: {
                 temperature: 0.1,
-                maxOutputTokens: 2048,
-                topP: 0.8,
-                topK: 40
+                max_output_tokens: 2048,
+                top_p: 0.8,
+                top_k: 40
             }
         };
 
         try {
-            const url = `${this.endpoint}/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/gemini-1.5-flash:predict`;
+            const url = `${this.endpoint}/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/gemini-2.5-flash-lite:generateContent`;
             
             const response = await fetch(url, {
                 method: 'POST',
@@ -84,11 +83,11 @@ class VertexAIClient {
 
             const data = await response.json();
             
-            if (!data.predictions || data.predictions.length === 0) {
-                throw new Error('No predictions in response');
+            if (!data.candidates || data.candidates.length === 0) {
+                throw new Error('No candidates in response');
             }
 
-            const content = data.predictions[0].candidates[0].content;
+            const content = data.candidates[0].content.parts[0].text;
             return this.parseResponse(content);
             
         } catch (error) {

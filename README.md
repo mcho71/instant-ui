@@ -1,12 +1,12 @@
 # Instant UI - AI駆動アプリランチャー
 
-Google Vertex AIのGemini Flash Liteモデルを使用して、ユーザーのアクションに応じて動的にUIを生成するWebアプリケーションの試作です。
+Google Vertex AIのGemini 2.5 Flash-Liteモデルを使用して、ユーザーのアクションに応じて動的にUIを生成するWebアプリケーションの試作です。
 
 ## 特徴
 
 - **AI駆動のUI生成**: アプリアイコンをクリックすると、AIが完全に機能するアプリUIを即座に生成
 - **デスクトップライクUI**: ドラッグ可能なウィンドウシステム
-- **リアルタイム生成**: Gemini Flash Liteによる高速レスポンス
+- **リアルタイム生成**: Gemini 2.5 Flash-Liteによる高速レスポンス
 
 ## セットアップ
 
@@ -63,7 +63,7 @@ AIプロンプトは `prompts/` ディレクトリで管理されています：
 
 - **フロントエンド**: Vanilla JavaScript, Tailwind CSS
 - **バックエンド**: Node.js, Express
-- **AI**: Google Vertex AI (Gemini Flash Lite)
+- **AI**: Google Vertex AI (Gemini 2.5 Flash-Lite)
 
 ## 注意事項
 
