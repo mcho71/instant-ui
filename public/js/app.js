@@ -52,7 +52,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.modelSwitcher) {
         await window.modelSwitcher.init();
     }
+    
+    // キャッシュ管理機能を初期化
+    if (window.cacheManager) {
+        await window.cacheManager.init();
+        window.cacheManager.startStatsUpdate();
+        
+        // キャッシュ管理ボタンのイベントリスナー
+        const cacheToggle = document.getElementById('cache-toggle');
+        if (cacheToggle) {
+            cacheToggle.addEventListener('click', () => {
+                window.cacheManager.togglePanel();
+            });
+        }
+    }
+    
+    // アプリアイコンを更新する関数をグローバルに公開
+    window.updateAppIcons = updateAppIcons;
 });
+
+// アプリアイコンを更新（キャッシュ状態の変更を反映）
+function updateAppIcons() {
+    const launcher = document.querySelector('#launcher .grid');
+    if (launcher) {
+        launcher.innerHTML = '';
+        apps.forEach((app, index) => {
+            const appElement = createAppIcon(app);
+            launcher.appendChild(appElement);
+        });
+    }
+}
 
 // アプリランチャーの描画
 function renderAppLauncher() {
@@ -73,45 +102,79 @@ function createAppIcon(app) {
     const div = document.createElement('div');
     div.className = 'app-icon text-center tooltip';
     div.setAttribute('data-tooltip', app.description);
+    
+    // キャッシュ状態をチェック
+    const hasCachedUI = window.uiCacheManager ? window.uiCacheManager.hasCache(app.id) : false;
+    const cacheIndicator = hasCachedUI ? '<div class="absolute top-2 right-2 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow-lg z-20" title="キャッシュ済み"></div>' : '';
+    
     div.innerHTML = `
         <div class="app-card bg-gradient-to-br ${app.gradient} text-white rounded-3xl p-8 mb-3 shadow-xl hover:shadow-2xl relative overflow-hidden">
             <div class="text-5xl mb-2 relative z-10">${app.icon}</div>
+            ${cacheIndicator}
         </div>
         <p class="text-sm font-semibold text-white drop-shadow-sm">${app.name}</p>
         <p class="text-xs text-white/70 mt-1">${app.description}</p>
+        <p class="text-xs text-white/50 mt-1">${hasCachedUI ? 'Shift+クリックで再生成' : '初回生成'}</p>
     `;
     
-    div.addEventListener('click', () => launchApp(app));
+    div.addEventListener('click', (event) => launchApp(app, event));
     
     return div;
 }
 
 // アプリの起動
-async function launchApp(app) {
+async function launchApp(app, event) {
     console.log(`Launching ${app.name}...`);
     
     // クリックフィードバック
     const appElement = event.currentTarget;
     appElement.classList.add('pulse');
     
-    // ローディング表示
-    showLoading();
-    
-    const startTime = Date.now();
+    // Shift+クリックで強制再生成
+    const forceRegenerate = event.shiftKey;
     
     try {
-        // AIにUI生成をリクエスト
-        const response = await window.aiClient.generateUI(app.id, {
-            appName: app.name,
-            appType: app.id
-        });
+        let response;
+        let fromCache = false;
+        const startTime = Date.now();
         
-        const endTime = Date.now();
-        const responseTime = endTime - startTime;
+        // キャッシュファースト（強制再生成でない場合）
+        if (!forceRegenerate && window.uiCacheManager) {
+            response = window.uiCacheManager.getCachedUI(app.id);
+            if (response) {
+                fromCache = true;
+                console.log(`Using cached UI for ${app.name}`);
+            }
+        }
         
-        // パフォーマンス記録
-        if (window.modelSwitcher) {
-            window.modelSwitcher.recordResponseTime(responseTime);
+        // キャッシュが無い場合はAI生成
+        if (!response) {
+            // ローディング表示
+            showLoading();
+            
+            // AIにUI生成をリクエスト
+            response = await window.aiClient.generateUI(app.id, {
+                appName: app.name,
+                appType: app.id
+            });
+            
+            // キャッシュに保存
+            if (window.uiCacheManager && response) {
+                window.uiCacheManager.cacheUI(app.id, response);
+                
+                // アプリアイコンを更新（キャッシュ状態を反映）
+                if (window.updateAppIcons) {
+                    window.updateAppIcons();
+                }
+            }
+            
+            const endTime = Date.now();
+            const responseTime = endTime - startTime;
+            
+            // パフォーマンス記録
+            if (window.modelSwitcher) {
+                window.modelSwitcher.recordResponseTime(responseTime);
+            }
         }
         
         // ウィンドウを作成して表示
@@ -126,11 +189,22 @@ async function launchApp(app) {
         // ローディング非表示
         hideLoading();
         
-        // 成功フィードバック（パフォーマンス情報付き）
-        const performanceInfo = response._performance ? 
-            ` (${response._performance.responseTime}ms)` : 
-            ` (${responseTime}ms)`;
-        showSuccess(`${app.name}を起動しました${performanceInfo}`);
+        // 成功フィードバック
+        let message = `${app.name}を起動しました`;
+        if (fromCache) {
+            const cacheInfo = response._cache;
+            message += ` (キャッシュ利用: ${cacheInfo.model_display_name})`;
+        } else {
+            const performanceInfo = response._performance ? 
+                ` (${response._performance.responseTime}ms)` : '';
+            message += performanceInfo;
+        }
+        
+        if (forceRegenerate) {
+            message += ' (強制再生成)';
+        }
+        
+        showSuccess(message);
         
     } catch (error) {
         console.error('Error launching app:', error);

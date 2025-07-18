@@ -166,8 +166,19 @@
                 <h1 class="text-2xl font-bold text-white drop-shadow-lg">✨ Instant UI</h1>
                 <p class="text-sm text-white/80">AI駆動アプリランチャー</p>
             </div>
-            <div id="model-switcher-container" class="flex items-center space-x-4">
-                <!-- モデル切り替えUIはここに追加される -->
+            <div class="flex items-center space-x-4">
+                <!-- キャッシュ管理ボタン -->
+                <div class="flex items-center space-x-2">
+                    <button id="cache-toggle" class="glass rounded-lg px-3 py-1 text-sm text-white hover:bg-white/10 transition-colors tooltip" data-tooltip="キャッシュ管理">
+                        💾
+                    </button>
+                    <div id="cache-indicator" class="text-xs text-white/60">-</div>
+                </div>
+                
+                <!-- モデル切り替えUI -->
+                <div id="model-switcher-container" class="flex items-center space-x-4">
+                    <!-- モデル切り替えUIはここに追加される -->
+                </div>
             </div>
         </div>
     </header>
@@ -206,8 +217,10 @@
 
     <!-- JavaScript -->
     <script src="/js/storage.js"></script>
+    <script src="/js/ui-cache.js"></script>
     <script src="/js/ai-client.js"></script>
     <script src="/js/model-switcher.js"></script>
+    <script src="/js/cache-manager.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/window-manager.js"></script>
 </body>
