@@ -17,11 +17,11 @@ app.use(express.static('public'));
 
 // APIエンドポイント
 app.post('/api/generate-ui', async (req, res) => {
-  const { appType, context } = req.body;
+  const { appType, context, model } = req.body;
   
   try {
     // Vertex AIでUI生成を試行
-    const aiResponse = await vertexAI.generateUI(appType, context);
+    const aiResponse = await vertexAI.generateUI(appType, context, model);
     
     res.json({ success: true, data: aiResponse });
   } catch (error) {
@@ -30,10 +30,65 @@ app.post('/api/generate-ui', async (req, res) => {
       message: error.message,
       stack: error.stack,
       appType: appType,
-      context: context
+      context: context,
+      model: model
     });
     
     // エラー時はエラーレスポンスを返す
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// モデル情報取得エンドポイント
+app.get('/api/models', (req, res) => {
+  try {
+    const models = vertexAI.getAvailableModels();
+    const currentModel = vertexAI.getCurrentModel();
+    
+    res.json({ 
+      success: true, 
+      data: {
+        available: models,
+        current: currentModel
+      }
+    });
+  } catch (error) {
+    console.error('Error getting models:', error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// モデル変更エンドポイント
+app.post('/api/models/switch', (req, res) => {
+  const { model } = req.body;
+  
+  try {
+    vertexAI.setModel(model);
+    const currentModel = vertexAI.getCurrentModel();
+    
+    res.json({ 
+      success: true, 
+      data: {
+        current: currentModel
+      }
+    });
+  } catch (error) {
+    console.error('Error switching model:', error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// パフォーマンス統計エンドポイント
+app.get('/api/performance', (req, res) => {
+  try {
+    const stats = vertexAI.getPerformanceStats();
+    
+    res.json({ 
+      success: true, 
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error getting performance stats:', error);
     res.json({ success: false, error: error.message });
   }
 });

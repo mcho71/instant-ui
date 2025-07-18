@@ -45,8 +45,13 @@ const apps = [
 ];
 
 // 初期化
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     renderAppLauncher();
+    
+    // モデル切り替え機能を初期化
+    if (window.modelSwitcher) {
+        await window.modelSwitcher.init();
+    }
 });
 
 // アプリランチャーの描画
@@ -92,12 +97,22 @@ async function launchApp(app) {
     // ローディング表示
     showLoading();
     
+    const startTime = Date.now();
+    
     try {
         // AIにUI生成をリクエスト
         const response = await window.aiClient.generateUI(app.id, {
             appName: app.name,
             appType: app.id
         });
+        
+        const endTime = Date.now();
+        const responseTime = endTime - startTime;
+        
+        // パフォーマンス記録
+        if (window.modelSwitcher) {
+            window.modelSwitcher.recordResponseTime(responseTime);
+        }
         
         // ウィンドウを作成して表示
         const windowElement = window.windowManager.createWindow({
@@ -111,8 +126,11 @@ async function launchApp(app) {
         // ローディング非表示
         hideLoading();
         
-        // 成功フィードバック
-        showSuccess(`${app.name}を起動しました`);
+        // 成功フィードバック（パフォーマンス情報付き）
+        const performanceInfo = response._performance ? 
+            ` (${response._performance.responseTime}ms)` : 
+            ` (${responseTime}ms)`;
+        showSuccess(`${app.name}を起動しました${performanceInfo}`);
         
     } catch (error) {
         console.error('Error launching app:', error);
